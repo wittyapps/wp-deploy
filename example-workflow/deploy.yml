@@ -1,10 +1,13 @@
 # Copy this file into your plugin or theme repo at:
 #   .github/workflows/deploy.yml
 #
-# Required org/repo secrets (configure once in GitHub Settings → Secrets):
+# ── Single-server secrets (configure in GitHub Settings → Secrets) ────────────
 #   SERVER_HOST    — SSH server hostname or IP
 #   SERVER_USER    — SSH username
 #   SERVER_SSH_KEY — Full private key (PEM or OpenSSH format)
+#
+# ── Multi-server secret ───────────────────────────────────────────────────────
+#   SERVERS_JSON   — JSON array of server objects (see multi-server example below)
 #
 # Set `type` to 'plugin' or 'theme' to control the wp-content subdirectory.
 
@@ -15,7 +18,8 @@ on:
     types: [published]
 
 jobs:
-  deploy:
+  # ── Single-server deployment ─────────────────────────────────────────────────
+  deploy-single:
     runs-on: ubuntu-latest
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
@@ -26,3 +30,18 @@ jobs:
           ssh_private_key: ${{ secrets.SERVER_SSH_KEY }}
           # ssh_port: 22            # optional, default: 22
           # dest_base_path: /public_html/wp-content  # optional
+
+  # ── Multi-server deployment ───────────────────────────────────────────────────
+  # Store the JSON array as a single secret (SERVERS_JSON) in GitHub Settings.
+  # Example value for SERVERS_JSON:
+  # [
+  #   {"ssh_host":"server1.example.com","ssh_user":"deploy","ssh_private_key":"<KEY>"},
+  #   {"ssh_host":"server2.example.com","ssh_user":"deploy","ssh_private_key":"<KEY>","ssh_port":"2222","dest_base_path":"/var/www/wp-content"}
+  # ]
+  deploy-multi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: wittyapps/wp-deploy/.github/actions/deploy@main
+        with:
+          type: plugin        # or theme
+          servers: ${{ secrets.SERVERS_JSON }}
