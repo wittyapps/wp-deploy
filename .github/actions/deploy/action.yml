@@ -1,0 +1,28 @@
+name: WordPress Deploy
+description: Downloads a GitHub release zip and deploys it to a WordPress wp-content directory via SCP/SSH.
+
+inputs:
+  type:
+    description: "Target wp-content subdirectory type: 'plugin' or 'theme'"
+    required: true
+  ssh_host:
+    description: SSH server hostname or IP address
+    required: true
+  ssh_user:
+    description: SSH username
+    required: true
+  ssh_private_key:
+    description: SSH private key (PEM or OpenSSH format)
+    required: true
+  ssh_port:
+    description: SSH port
+    required: false
+    default: '22'
+  dest_base_path:
+    description: Base path to wp-content on the remote server
+    required: false
+    default: /public_html/wp-content
+
+runs:
+  using: node20
+  main: dist/index.js

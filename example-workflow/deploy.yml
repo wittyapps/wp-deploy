@@ -1,0 +1,28 @@
+# Copy this file into your plugin or theme repo at:
+#   .github/workflows/deploy.yml
+#
+# Required org/repo secrets (configure once in GitHub Settings → Secrets):
+#   SERVER_HOST    — SSH server hostname or IP
+#   SERVER_USER    — SSH username
+#   SERVER_SSH_KEY — Full private key (PEM or OpenSSH format)
+#
+# Set `type` to 'plugin' or 'theme' to control the wp-content subdirectory.
+
+name: Deploy to WordPress
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: wittyapps/wp-deploy/.github/actions/deploy@main
+        with:
+          type: plugin        # or theme
+          ssh_host: ${{ secrets.SERVER_HOST }}
+          ssh_user: ${{ secrets.SERVER_USER }}
+          ssh_private_key: ${{ secrets.SERVER_SSH_KEY }}
+          # ssh_port: 22            # optional, default: 22
+          # dest_base_path: /public_html/wp-content  # optional
