@@ -5,21 +5,29 @@ inputs:
   type:
     description: "Target wp-content subdirectory type: 'plugin' or 'theme'"
     required: true
+  servers:
+    description: >
+      JSON array of server objects for deploying to multiple servers.
+      Each object may contain: ssh_host, ssh_user, ssh_private_key, ssh_port (default: 22),
+      dest_base_path (default: /public_html/wp-content).
+      When provided, the individual ssh_host/ssh_user/ssh_private_key inputs are ignored.
+    required: false
+    default: ''
   ssh_host:
-    description: SSH server hostname or IP address
-    required: true
+    description: SSH server hostname or IP address (single-server mode)
+    required: false
   ssh_user:
-    description: SSH username
-    required: true
+    description: SSH username (single-server mode)
+    required: false
   ssh_private_key:
-    description: SSH private key (PEM or OpenSSH format)
-    required: true
+    description: SSH private key (PEM or OpenSSH format) (single-server mode)
+    required: false
   ssh_port:
-    description: SSH port
+    description: SSH port (single-server mode)
     required: false
     default: '22'
   dest_base_path:
-    description: Base path to wp-content on the remote server
+    description: Base path to wp-content on the remote server (single-server mode)
     required: false
     default: /public_html/wp-content
 
