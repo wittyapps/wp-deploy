@@ -1,15 +1,22 @@
 # Copy this file into your plugin or theme repo at:
 #   .github/workflows/deploy.yml
 #
-# ── Single-server secrets (configure in GitHub Settings → Secrets) ────────────
-#   SERVER_HOST    — SSH server hostname or IP
-#   SERVER_USER    — SSH username
-#   SERVER_SSH_KEY — Full private key (PEM or OpenSSH format)
+# ── Staging secrets (releases from the 'develop' branch) ─────────────────────
+#   STAGING_SERVERS_JSON  — JSON array of staging server objects
 #
-# ── Multi-server secret ───────────────────────────────────────────────────────
-#   SERVERS_JSON   — JSON array of server objects (see multi-server example below)
+# ── Production secrets (releases from the 'master' branch) ───────────────────
+#   PRODUCTION_SERVERS_JSON — JSON array of production server objects
+#
+# Releases created from the 'develop' branch deploy to staging.
+# Releases created from the 'master' branch deploy to production.
 #
 # Set `type` to 'plugin' or 'theme' to control the wp-content subdirectory.
+#
+# Example value for STAGING_SERVERS_JSON / PRODUCTION_SERVERS_JSON:
+# [
+#   {"ssh_host":"server1.example.com","ssh_user":"deploy","ssh_private_key":"<KEY>"},
+#   {"ssh_host":"server2.example.com","ssh_user":"deploy","ssh_private_key":"<KEY>","ssh_port":"2222","dest_base_path":"/var/www/wp-content"}
+# ]
 
 name: Deploy to WordPress
 
@@ -18,30 +25,22 @@ on:
     types: [published]
 
 jobs:
-  # ── Single-server deployment ─────────────────────────────────────────────────
-  deploy-single:
+  # ── Staging deployment (releases from the develop branch) ────────────────────
+  deploy-staging:
+    if: github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or theme
-          ssh_host: ${{ secrets.SERVER_HOST }}
-          ssh_user: ${{ secrets.SERVER_USER }}
-          ssh_private_key: ${{ secrets.SERVER_SSH_KEY }}
-          # ssh_port: 22            # optional, default: 22
-          # dest_base_path: /public_html/wp-content  # optional
+          servers: ${{ secrets.STAGING_SERVERS_JSON }}
 
-  # ── Multi-server deployment ───────────────────────────────────────────────────
-  # Store the JSON array as a single secret (SERVERS_JSON) in GitHub Settings.
-  # Example value for SERVERS_JSON:
-  # [
-  #   {"ssh_host":"server1.example.com","ssh_user":"deploy","ssh_private_key":"<KEY>"},
-  #   {"ssh_host":"server2.example.com","ssh_user":"deploy","ssh_private_key":"<KEY>","ssh_port":"2222","dest_base_path":"/var/www/wp-content"}
-  # ]
-  deploy-multi:
+  # ── Production deployment (releases from the master branch) ──────────────────
+  deploy-production:
+    if: github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or theme
-          servers: ${{ secrets.SERVERS_JSON }}
+          servers: ${{ secrets.PRODUCTION_SERVERS_JSON }}

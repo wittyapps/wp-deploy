@@ -8,25 +8,23 @@ On every published release in a plugin or theme repo, this action:
 2. SCPs it to each server.
 3. SSHes in to unzip and merge files into the correct `wp-content` directory.
 
+Releases created from the **`develop`** branch are deployed to **staging** servers.  
+Releases created from the **`master`** branch are deployed to **production** servers.
+
 ---
 
 ## Setup
 
 ### 1. Configure org-level secrets
 
-#### Single server
+Add two secrets in **GitHub Settings → Secrets and variables → Actions** (at the organisation or repository level), each containing a JSON array of server objects:
 
-Add the following secrets once in **GitHub Settings → Secrets and variables → Actions** (at the organisation or repository level):
+| Secret                   | Description                        |
+|--------------------------|------------------------------------|
+| `STAGING_SERVERS_JSON`   | Servers to deploy to from `develop` |
+| `PRODUCTION_SERVERS_JSON`| Servers to deploy to from `master`  |
 
-| Secret            | Description                          |
-|-------------------|--------------------------------------|
-| `SERVER_HOST`     | SSH server hostname or IP address    |
-| `SERVER_USER`     | SSH username                         |
-| `SERVER_SSH_KEY`  | Full private key (PEM or OpenSSH)    |
-
-#### Multiple servers
-
-Create a single secret that contains a JSON array of server objects, e.g. `SERVERS_JSON`:
+Example value for each secret:
 
 ```json
 [
@@ -45,11 +43,9 @@ Create a single secret that contains a JSON array of server objects, e.g. `SERVE
 ]
 ```
 
-Each object in the array supports the same fields as the single-server inputs (`ssh_host`, `ssh_user`, `ssh_private_key`, `ssh_port`, `dest_base_path`). `ssh_host`, `ssh_user`, and `ssh_private_key` are required per server; the rest are optional and fall back to their defaults.
+Each object supports: `ssh_host`, `ssh_user`, `ssh_private_key` (required); `ssh_port` (default: `22`), `dest_base_path` (default: `/public_html/wp-content`) (optional).
 
 ### 2. Add the workflow to your plugin/theme repo
-
-#### Single server
 
 Copy `example-workflow/deploy.yml` into your plugin or theme repository at `.github/workflows/deploy.yml` and set the `type` input:
 
@@ -61,41 +57,35 @@ on:
     types: [published]
 
 jobs:
-  deploy:
+  deploy-staging:
+    if: github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or 'theme'
-          ssh_host: ${{ secrets.SERVER_HOST }}
-          ssh_user: ${{ secrets.SERVER_USER }}
-          ssh_private_key: ${{ secrets.SERVER_SSH_KEY }}
-```
+          servers: ${{ secrets.STAGING_SERVERS_JSON }}
 
-#### Multiple servers
-
-When `servers` is provided the individual `ssh_host` / `ssh_user` / `ssh_private_key` inputs are ignored, so you only need one step regardless of how many servers you have:
-
-```yaml
-name: Deploy to WordPress
-
-on:
-  release:
-    types: [published]
-
-jobs:
-  deploy:
+  deploy-production:
+    if: github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or 'theme'
-          servers: ${{ secrets.SERVERS_JSON }}
+          servers: ${{ secrets.PRODUCTION_SERVERS_JSON }}
 ```
+
+The `target_commitish` field on a GitHub Release is the branch the release was created from. Only the job matching the release's source branch will run — the other will be skipped.
 
 ### 3. Publish a release
 
-Create and publish a release in your plugin/theme repo. The action will:
+Create and publish a release in your plugin/theme repo, making sure to set the **target branch** correctly:
+
+- Releases targeting `develop` → deploy to staging
+- Releases targeting `master` → deploy to production
+
+The action will:
 
 - Deploy a **plugin** to `/public_html/wp-content/plugins/{repo-name}/`
 - Deploy a **theme** to `/public_html/wp-content/themes/{repo-name}/`
@@ -109,14 +99,12 @@ Files are merged (existing files are updated, extra files are preserved). When d
 | Input              | Required | Default                    | Description                                                                 |
 |--------------------|----------|----------------------------|-----------------------------------------------------------------------------|
 | `type`             | ✅        | —                          | `plugin` or `theme`                                                         |
-| `servers`          | ❌        | —                          | JSON array of server objects (see above). Overrides single-server inputs.   |
-| `ssh_host`         | ✅*       | —                          | SSH server hostname or IP (single-server mode)                              |
-| `ssh_user`         | ✅*       | —                          | SSH username (single-server mode)                                           |
-| `ssh_private_key`  | ✅*       | —                          | SSH private key (PEM or OpenSSH) (single-server mode)                      |
-| `ssh_port`         | ❌        | `22`                       | SSH port (single-server mode)                                               |
-| `dest_base_path`   | ❌        | `/public_html/wp-content`  | Base path to wp-content on the server (single-server mode)                  |
-
-\* Required when `servers` is not provided.
+| `servers`          | ✅        | —                          | JSON array of server objects (see above).                                   |
+| `ssh_host`         | ❌        | —                          | SSH server hostname or IP (single-server fallback)                          |
+| `ssh_user`         | ❌        | —                          | SSH username (single-server fallback)                                       |
+| `ssh_private_key`  | ❌        | —                          | SSH private key (PEM or OpenSSH) (single-server fallback)                   |
+| `ssh_port`         | ❌        | `22`                       | SSH port (single-server fallback)                                           |
+| `dest_base_path`   | ❌        | `/public_html/wp-content`  | Base path to wp-content on the server (single-server fallback)              |
 
 ---
 
