@@ -31966,7 +31966,11 @@ async function deployToServer(server, localZipPath, repoName, type) {
 async function run() {
   try {
     // ── 1. Read inputs ────────────────────────────────────────────────────────
-    const githubToken = core.getInput('github_token');
+    // Prefer the explicit input; fall back to the runner-injected env var.
+    // (action.yml defaults are not expression-evaluated, so ${{ github.token }}
+    //  would be passed as a literal string if the workflow omits this input.)
+    const githubToken = core.getInput('github_token') || process.env.GITHUB_TOKEN || '';
+    if (githubToken) core.setSecret(githubToken);
     const type = core.getInput('type', { required: true });
 
     if (!['plugin', 'theme'].includes(type)) {

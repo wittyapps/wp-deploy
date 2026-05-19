@@ -3,9 +3,9 @@ description: Downloads a GitHub release zip and deploys it to a WordPress wp-con
 
 inputs:
   github_token:
-    description: GitHub token used to authenticate the release zip download. Defaults to the built-in GITHUB_TOKEN.
+    description: GitHub token used to authenticate the release zip download. Defaults to the GITHUB_TOKEN environment variable automatically injected by the runner.
     required: false
-    default: ${{ github.token }}
+    default: ''
   type:
     description: "Target wp-content subdirectory type: 'plugin' or 'theme'"
     required: true
