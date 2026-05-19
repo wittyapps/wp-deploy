@@ -2,8 +2,6 @@
 
 const core = require('@actions/core');
 const exec = require('@actions/exec');
-const https = require('https');
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -41,53 +39,32 @@ function sanitizeJsonControlChars(str) {
 }
 
 /**
- * Download a URL to a local file, following redirects.
- * Uses the built-in https/http modules — no extra dependencies.
+ * Download a URL to a local file using curl.
+ * curl handles redirects (-L), sets a User-Agent, and is available on all
+ * GitHub-hosted runners. The token is written to a temp config file so it
+ * never appears in the process argument list.
+ *
  * @param {string} url       - URL to download
  * @param {string} destPath  - local file path to write to
- * @param {object} [headers] - optional HTTP request headers (e.g. Authorization)
+ * @param {string} [token]   - optional Bearer token for Authorization header
  */
-function download(url, destPath, headers = {}) {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destPath);
+async function download(url, destPath, token) {
+  const tmpDir = os.tmpdir();
+  const configPath = path.join(tmpDir, `curl_cfg_${Date.now()}_${Math.random().toString(36).slice(2)}`);
 
-    const request = (requestUrl, requestHeaders) => {
-      const mod = requestUrl.startsWith('https') ? https : http;
-      const parsedUrl = new URL(requestUrl);
-      const options = {
-        hostname: parsedUrl.hostname,
-        path: parsedUrl.pathname + parsedUrl.search,
-        headers: requestHeaders,
-      };
-      mod.get(options, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          // Follow redirect — drop Authorization header when crossing to a
-          // different host (e.g. GitHub API → S3 redirect) to avoid leaking
-          // the token to a third-party server.
-          const redirectUrl = res.headers.location;
-          const redirectHost = new URL(redirectUrl).hostname;
-          const nextHeaders = redirectHost === parsedUrl.hostname ? requestHeaders : {};
-          request(redirectUrl, nextHeaders);
-          return;
-        }
-        if (res.statusCode !== 200) {
-          reject(new Error(`Download failed with status ${res.statusCode}: ${requestUrl}`));
-          return;
-        }
-        res.pipe(file);
-        file.on('finish', () => file.close(resolve));
-        file.on('error', (err) => {
-          fs.unlink(destPath, () => {});
-          reject(err);
-        });
-      }).on('error', (err) => {
-        fs.unlink(destPath, () => {});
-        reject(err);
-      });
-    };
+  try {
+    // Write curl config to a 0600 temp file so the token is never exposed in
+    // process arguments (visible to other processes via `ps`).
+    let cfg = `location\nsilent\nshow-error\nfail-with-body\noutput = "${destPath}"\nurl = "${url}"\n`;
+    if (token) {
+      cfg += `header = "Authorization: Bearer ${token}"\n`;
+    }
+    fs.writeFileSync(configPath, cfg, { mode: 0o600 });
 
-    request(url, headers);
-  });
+    await exec.exec('curl', ['--config', configPath]);
+  } finally {
+    fs.unlink(configPath, () => {});
+  }
 }
 
 /**
@@ -234,8 +211,7 @@ async function run() {
     const tmpDir = os.tmpdir();
     const localZipPath = path.join(tmpDir, `${repoName}.zip`);
     core.info(`Downloading zip to ${localZipPath} …`);
-    const downloadHeaders = githubToken ? { Authorization: `Bearer ${githubToken}` } : {};
-    await download(zipUrl, localZipPath, downloadHeaders);
+    await download(zipUrl, localZipPath, githubToken || undefined);
     core.info('Download complete.');
 
     // ── 5. Deploy to each server in sequence ─────────────────────────────────
