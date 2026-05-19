@@ -29,18 +29,24 @@ jobs:
   deploy-staging:
     if: github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or theme
           servers: ${{ secrets.STAGING_SERVERS_JSON }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   # ── Production deployment (releases from the master branch) ──────────────────
   deploy-production:
     if: github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or theme
           servers: ${{ secrets.PRODUCTION_SERVERS_JSON }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}

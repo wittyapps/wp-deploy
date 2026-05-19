@@ -2,6 +2,10 @@ name: WordPress Deploy
 description: Downloads a GitHub release zip and deploys it to a WordPress wp-content directory via SCP/SSH.
 
 inputs:
+  github_token:
+    description: GitHub token used to authenticate the release zip download. Defaults to the built-in GITHUB_TOKEN.
+    required: false
+    default: ${{ github.token }}
   type:
     description: "Target wp-content subdirectory type: 'plugin' or 'theme'"
     required: true

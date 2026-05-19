@@ -43,17 +43,31 @@ function sanitizeJsonControlChars(str) {
 /**
  * Download a URL to a local file, following redirects.
  * Uses the built-in https/http modules — no extra dependencies.
+ * @param {string} url       - URL to download
+ * @param {string} destPath  - local file path to write to
+ * @param {object} [headers] - optional HTTP request headers (e.g. Authorization)
  */
-function download(url, destPath) {
+function download(url, destPath, headers = {}) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(destPath);
 
-    const request = (requestUrl) => {
+    const request = (requestUrl, requestHeaders) => {
       const mod = requestUrl.startsWith('https') ? https : http;
-      mod.get(requestUrl, (res) => {
+      const parsedUrl = new URL(requestUrl);
+      const options = {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        headers: requestHeaders,
+      };
+      mod.get(options, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-          // Follow redirect
-          request(res.headers.location);
+          // Follow redirect — drop Authorization header when crossing to a
+          // different host (e.g. GitHub API → S3 redirect) to avoid leaking
+          // the token to a third-party server.
+          const redirectUrl = res.headers.location;
+          const redirectHost = new URL(redirectUrl).hostname;
+          const nextHeaders = redirectHost === parsedUrl.hostname ? requestHeaders : {};
+          request(redirectUrl, nextHeaders);
           return;
         }
         if (res.statusCode !== 200) {
@@ -72,7 +86,7 @@ function download(url, destPath) {
       });
     };
 
-    request(url);
+    request(url, headers);
   });
 }
 
@@ -145,6 +159,7 @@ async function deployToServer(server, localZipPath, repoName, type) {
 async function run() {
   try {
     // ── 1. Read inputs ────────────────────────────────────────────────────────
+    const githubToken = core.getInput('github_token');
     const type = core.getInput('type', { required: true });
 
     if (!['plugin', 'theme'].includes(type)) {
@@ -215,7 +230,8 @@ async function run() {
     const tmpDir = os.tmpdir();
     const localZipPath = path.join(tmpDir, `${repoName}.zip`);
     core.info(`Downloading zip to ${localZipPath} …`);
-    await download(zipUrl, localZipPath);
+    const downloadHeaders = githubToken ? { Authorization: `Bearer ${githubToken}` } : {};
+    await download(zipUrl, localZipPath, downloadHeaders);
     core.info('Download complete.');
 
     // ── 5. Deploy to each server in sequence ─────────────────────────────────

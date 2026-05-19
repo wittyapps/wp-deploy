@@ -60,20 +60,26 @@ jobs:
   deploy-staging:
     if: github.event.release.target_commitish == 'develop'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or 'theme'
           servers: ${{ secrets.STAGING_SERVERS_JSON }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-production:
     if: github.event.release.target_commitish == 'master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: wittyapps/wp-deploy/.github/actions/deploy@main
         with:
           type: plugin        # or 'theme'
           servers: ${{ secrets.PRODUCTION_SERVERS_JSON }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 The `target_commitish` field on a GitHub Release is the branch the release was created from. Only the job matching the release's source branch will run — the other will be skipped.
@@ -100,6 +106,7 @@ Files are merged (existing files are updated, extra files are preserved). When d
 |--------------------|----------|----------------------------|-----------------------------------------------------------------------------|
 | `type`             | ✅        | —                          | `plugin` or `theme`                                                         |
 | `servers`          | ✅        | —                          | JSON array of server objects (see above).                                   |
+| `github_token`     | ❌        | `${{ github.token }}`      | Token used to authenticate the release zip download. Required for private repos — pass `${{ secrets.GITHUB_TOKEN }}` and ensure the job has `permissions: contents: read`. |
 | `ssh_host`         | ❌        | —                          | SSH server hostname or IP (single-server fallback)                          |
 | `ssh_user`         | ❌        | —                          | SSH username (single-server fallback)                                       |
 | `ssh_private_key`  | ❌        | —                          | SSH private key (PEM or OpenSSH) (single-server fallback)                   |
