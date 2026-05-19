@@ -9,6 +9,38 @@ const path = require('path');
 const os = require('os');
 
 /**
+ * Escape literal control characters (newlines, carriage returns, tabs, etc.)
+ * that appear inside JSON string values. This handles the common case where
+ * an SSH private key stored in a GitHub secret retains its literal newlines
+ * instead of having them escaped as \n before being embedded in JSON.
+ */
+function sanitizeJsonControlChars(str) {
+  const ESCAPES = { '\n': '\\n', '\r': '\\r', '\t': '\\t', '\b': '\\b', '\f': '\\f' };
+  let result = '';
+  let inString = false;
+  let i = 0;
+  while (i < str.length) {
+    const ch = str[i];
+    if (ch === '\\' && inString) {
+      // Already-escaped sequence — keep both the backslash and the next char.
+      result += ch + (str[i + 1] || '');
+      i += 2;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+    } else if (inString && ESCAPES[ch]) {
+      result += ESCAPES[ch];
+    } else {
+      result += ch;
+    }
+    i++;
+  }
+  return result;
+}
+
+/**
  * Download a URL to a local file, following redirects.
  * Uses the built-in https/http modules — no extra dependencies.
  */
@@ -128,7 +160,14 @@ async function run() {
       try {
         servers = JSON.parse(serversInput);
       } catch (e) {
-        throw new Error(`Failed to parse 'servers' input as JSON: ${e.message}`);
+        // SSH private keys often contain literal newlines which are invalid in
+        // JSON strings. Sanitize by escaping control characters inside string
+        // literals and retry before giving up.
+        try {
+          servers = JSON.parse(sanitizeJsonControlChars(serversInput));
+        } catch (_e2) {
+          throw new Error(`Failed to parse 'servers' input as JSON: ${e.message}`);
+        }
       }
       if (!Array.isArray(servers) || servers.length === 0) {
         throw new Error("Input 'servers' must be a non-empty JSON array.");

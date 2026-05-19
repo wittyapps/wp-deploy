@@ -31815,6 +31815,31 @@ const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
 const os = __nccwpck_require__(857);
 
+function sanitizeJsonControlChars(str) {
+  const ESCAPES = { '\n': '\\n', '\r': '\\r', '\t': '\\t', '\b': '\\b', '\f': '\\f' };
+  let result = '';
+  let inString = false;
+  let i = 0;
+  while (i < str.length) {
+    const ch = str[i];
+    if (ch === '\\' && inString) {
+      result += ch + (str[i + 1] || '');
+      i += 2;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+    } else if (inString && ESCAPES[ch]) {
+      result += ESCAPES[ch];
+    } else {
+      result += ch;
+    }
+    i++;
+  }
+  return result;
+}
+
 /**
  * Download a URL to a local file, following redirects.
  * Uses the built-in https/http modules — no extra dependencies.
@@ -31935,7 +31960,11 @@ async function run() {
       try {
         servers = JSON.parse(serversInput);
       } catch (e) {
-        throw new Error(`Failed to parse 'servers' input as JSON: ${e.message}`);
+        try {
+          servers = JSON.parse(sanitizeJsonControlChars(serversInput));
+        } catch (_e2) {
+          throw new Error(`Failed to parse 'servers' input as JSON: ${e.message}`);
+        }
       }
       if (!Array.isArray(servers) || servers.length === 0) {
         throw new Error("Input 'servers' must be a non-empty JSON array.");
