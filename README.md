@@ -38,12 +38,12 @@ Example value for each secret:
     "ssh_user": "deploy",
     "ssh_private_key": "<PRIVATE KEY>",
     "ssh_port": "2222",
-    "dest_base_path": "/var/www/wp-content"
+    "dest_base_path": "public_html/wp-content"
   }
 ]
 ```
 
-Each object supports: `ssh_host`, `ssh_user`, `ssh_private_key` (required); `ssh_port` (default: `22`), `dest_base_path` (default: `/public_html/wp-content`) (optional).
+Each object supports: `ssh_host`, `ssh_user`, `ssh_private_key` (required); `ssh_port` (default: `22`), `dest_base_path` (default: `public_html/wp-content`) (optional).
 
 ### 2. Add the workflow to your plugin/theme repo
 
@@ -93,8 +93,8 @@ Create and publish a release in your plugin/theme repo, making sure to set the *
 
 The action will:
 
-- Deploy a **plugin** to `/public_html/wp-content/plugins/{repo-name}/`
-- Deploy a **theme** to `/public_html/wp-content/themes/{repo-name}/`
+- Deploy a **plugin** to `public_html/wp-content/plugins/{repo-name}/`
+- Deploy a **theme** to `public_html/wp-content/themes/{repo-name}/`
 
 Files are merged (existing files are updated, extra files are preserved). When deploying to multiple servers the zip is downloaded once and then uploaded to each server in sequence.
 
@@ -111,7 +111,7 @@ Files are merged (existing files are updated, extra files are preserved). When d
 | `ssh_user`         | ❌        | —                          | SSH username (single-server fallback)                                       |
 | `ssh_private_key`  | ❌        | —                          | SSH private key (PEM or OpenSSH) (single-server fallback)                   |
 | `ssh_port`         | ❌        | `22`                       | SSH port (single-server fallback)                                           |
-| `dest_base_path`   | ❌        | `/public_html/wp-content`  | Base path to wp-content on the server (single-server fallback)              |
+| `dest_base_path`   | ❌        | `public_html/wp-content`  | Base path to wp-content on the server (single-server fallback)              |
 
 ---
 

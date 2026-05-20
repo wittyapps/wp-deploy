@@ -13,7 +13,7 @@ inputs:
     description: >
       JSON array of server objects for deploying to multiple servers.
       Each object may contain: ssh_host, ssh_user, ssh_private_key, ssh_port (default: 22),
-      dest_base_path (default: /public_html/wp-content).
+      dest_base_path (default: public_html/wp-content).
       When provided, the individual ssh_host/ssh_user/ssh_private_key inputs are ignored.
     required: false
     default: ''
@@ -33,7 +33,7 @@ inputs:
   dest_base_path:
     description: Base path to wp-content on the remote server (single-server mode)
     required: false
-    default: /public_html/wp-content
+    default: public_html/wp-content
 
 runs:
   using: node24

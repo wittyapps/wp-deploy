@@ -31882,7 +31882,7 @@ async function download(url, destPath, token) {
  * @param {string} type         - 'plugin' or 'theme'
  */
 async function deployToServer(server, localZipPath, repoName, type) {
-  const { ssh_host, ssh_user, ssh_private_key, ssh_port = '22', dest_base_path = '/public_html/wp-content' } = server;
+  const { ssh_host, ssh_user, ssh_private_key, ssh_port = '22', dest_base_path = 'public_html/wp-content' } = server;
 
   if (!ssh_host) throw new Error('Missing required server field: ssh_host');
   if (!ssh_user) throw new Error('Missing required server field: ssh_user');
@@ -31981,7 +31981,7 @@ async function run() {
       const sshUser = core.getInput('ssh_user', { required: true });
       const sshPrivateKey = core.getInput('ssh_private_key', { required: true });
       const sshPort = core.getInput('ssh_port') || '22';
-      const destBasePath = core.getInput('dest_base_path') || '/public_html/wp-content';
+      const destBasePath = core.getInput('dest_base_path') || 'public_html/wp-content';
 
       servers = [{
         ssh_host: sshHost,
